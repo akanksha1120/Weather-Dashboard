@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BlueSky Weather App</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #e6f7ff; /* Light blueish background */
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+
+        #header {
+            background-color: #3399ff; /* Deep blue header */
+            padding: 10px;
+            color: #fff;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #favoriteCitiesContainer,
+        #weatherDataContainer,
+        #forecastDataContainer {
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: 20px auto;
+            padding: 20px;
+            max-width: 600px;
+        }
+
+        #favoriteCitiesList {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        button {
+            background-color: #0073e6; /* Dark blue button */
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+
+        input[type=text] {
+            width: 60%;
+            padding: 10px;
+            margin: 8px 0;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            margin-top: 10px;
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 15px;
+        }
+
+        th {
+            background-color: #0073e6; /* Dark blue table header */
+            color: white;
+        }
+
+        h2, h3 {
+            color: #333;
+        }
+
+        p {
+            margin: 10px 0;
+        }
+
+        .error-message {
+            color: #ff0000;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Beautiful heading for the weather app -->
+<div id="header">
+    BlueSky Weather App
+</div>
+
+
+<!-- Button to save a favorite city -->
+<button onclick="saveFavoriteCity()">Save Favorite City</button>
+
+<!-- Search box and button for weather -->
+<input type="text" id="citySearch" placeholder="Enter city name">
+<button onclick="search()">Search Weather</button>
+
+
+<!-- Display area for favorite cities -->
+<div id="favoriteCitiesContainer">
+    <h2>Your Favorite Cities:</h2>
+    <ul id="favoriteCitiesList"></ul>
+</div>
+
+<!-- Display area for weather data -->
+<div id="weatherDataContainer"></div>
+
+<!-- Display area for forecast data -->
+<div id="forecastDataContainer"></div>
+
+<script>
+    // Function to search for weather and forecast
+    function search() {
+       const citySearchInput = document.getElementById('citySearch');
+       const cityName = citySearchInput.value;
+       if (cityName) {
+           // Call both searchWeather and searchWeatherForecast
+           searchWeather(cityName);
+           searchWeatherForecast(cityName);
+       }
+   }
+
+   function searchWeather(cityName) {
+       fetch('/weather?city=' + encodeURIComponent(cityName))
+           .then(response => response.json())
+           .then(data => {
+               // Display weather data on the page
+               displayWeatherData(data);
+           })
+           .catch(error => {
+               console.error('Error getting weather data:', error);
+           });
+   }
+
+   function searchWeatherForecast(cityName) {
+       fetch('/forecast?city=' + encodeURIComponent(cityName))
+           .then(response => response.json())
+           .then(data => {
+               // Display forecast data on the page
+               displayForecastData(data);
+           })
+           .catch(error => {
+               console.error('Error getting forecast data:', error);
+           });
+   }
+
+   // Function to save favorite city
+   function saveFavoriteCity() {
+       const cityName = prompt('Enter your favorite city:');
+       if (cityName) {
+           fetch('/api/favorite-cities/save?cityName=' + encodeURIComponent(cityName), {
+               method: 'POST',
+           })
+           .then(response => response.json())
+           .then(data => {
+               alert(data.message);
+               // Refresh the favorite cities list after saving a new city
+               getFavoriteCities();
+           })
+           .catch(error => {
+               console.error('Error saving favorite city:', error);
+           });
+       }
+   }
+
+   // Function to get favorite cities and update HTML
+   function getFavoriteCities() {
+       fetch('/api/favorite-cities/list')
+           .then(response => response.json())
+           .then(data => {
+               const favoriteCitiesList = document.getElementById('favoriteCitiesList');
+               // Clear existing list items
+               favoriteCitiesList.innerHTML = '';
+               // Populate the list with retrieved data
+               data.forEach(city => {
+                   const listItem = document.createElement('li');
+                   listItem.textContent = city.cityName;
+                   favoriteCitiesList.appendChild(listItem);
+               });
+           })
+           .catch(error => {
+               console.error('Error getting favorite cities:', error);
+           });
+   }
+
+   function displayWeatherData(data) {
+       const weatherDataContainer = document.getElementById('weatherDataContainer');
+       // Clear existing weather data
+       weatherDataContainer.innerHTML = '';
+
+       if (data && data.city && data.temperature !== undefined && data.description) {
+           // Create elements to display weather information
+           const cityNameElement = document.createElement('h3');
+           cityNameElement.textContent = `Weather in ${data.city}:`;
+
+           const temperatureElement = document.createElement('p');
+           temperatureElement.textContent = `Temperature: ${data.temperature}°C`;
+
+           const descriptionElement = document.createElement('p');
+           descriptionElement.textContent = `Description: ${data.description}`;
+
+           // Display additional weather information
+           const humidityElement = document.createElement('p');
+           humidityElement.textContent = `Humidity: ${data.humidity}%`;
+
+           const windSpeedElement = document.createElement('p');
+           windSpeedElement.textContent = `Wind Speed: ${data.wind_speed} m/s`;
+
+           const weatherDescriptionsElement = document.createElement('p');
+           weatherDescriptionsElement.textContent = `Weather Descriptions: ${data.weather_descriptions.join(', ')}`;
+
+           // Append elements to the container
+           weatherDataContainer.appendChild(cityNameElement);
+           weatherDataContainer.appendChild(temperatureElement);
+           weatherDataContainer.appendChild(descriptionElement);
+           weatherDataContainer.appendChild(humidityElement);
+           weatherDataContainer.appendChild(windSpeedElement);
+           weatherDataContainer.appendChild(weatherDescriptionsElement);
+       } else {
+           // Log the unexpected response for debugging
+           console.error('Unexpected or incomplete weather data:', data);
+           // Display an error message on the page
+           const errorMessageElement = document.createElement('p');
+           errorMessageElement.textContent = 'Error: Unable to retrieve weather data.';
+           weatherDataContainer.appendChild(errorMessageElement);
+       }
+   }
+
+
+   function displayForecastData(data) {
+       const forecastDataContainer = document.getElementById('forecastDataContainer');
+       // Clear existing forecast data
+       forecastDataContainer.innerHTML = '';
+
+       if (data && data.city_name) {
+           // Create elements to display forecast information
+           const forecastCityNameElement = document.createElement('h3');
+           forecastCityNameElement.textContent = `5-Day Forecast for ${data.city_name}, ${data.country_code}:`;
+
+           const forecastTable = document.createElement('table');
+           // Add header row
+           const headerRow = forecastTable.insertRow();
+           headerRow.innerHTML = '<th>Date</th><th>Temperature (°C)</th>';
+           // Loop through forecast items
+           data.forecast.forEach(forecastItem => {
+               const row = forecastTable.insertRow();
+               row.innerHTML = `<td>${forecastItem.date}</td><td>${forecastItem.temperature}</td>`;
+               // Add more cells as needed
+           });
+
+           // Append elements to the container
+           forecastDataContainer.appendChild(forecastCityNameElement);
+           forecastDataContainer.appendChild(forecastTable);
+       } else {
+           // Log the unexpected response for debugging
+           console.error('Unexpected or incomplete forecast data:', data);
+           // Display an error message on the page
+           const errorMessageElement = document.createElement('p');
+           errorMessageElement.textContent = 'Error: Unable to retrieve forecast data.';
+           forecastDataContainer.appendChild(errorMessageElement);
+       }
+   }
+
+   // Example: Call the functions on page load
+   document.addEventListener('DOMContentLoaded', function() {
+       getFavoriteCities(); // Call getFavoriteCities on page load (or as needed)
+   });
+</script>
+
+</body>
+</html>
